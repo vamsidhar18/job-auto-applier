@@ -1,109 +1,37 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
 const cors = require('cors');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// LinkedIn Auto-Apply Function
-async function applyToLinkedInJob(jobData, applicantData) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+// Auto-Apply Function (Simulation for now)
+async function processJobApplication(jobData, applicantData) {
+  console.log(`Processing application for: ${applicantData.firstName} ${applicantData.lastName}`);
+  console.log(`Job: ${jobData.title} at ${jobData.url}`);
   
-  const page = await browser.newPage();
-  
-  try {
-    console.log(`Applying to: ${jobData.title} at ${jobData.url}`);
-    
-    // Navigate to job URL
-    await page.goto(jobData.url, { waitUntil: 'networkidle2', timeout: 30000 });
-    
-    // Look for Easy Apply button
-    const easyApplyButton = await page.$('[data-test-apply-button], [aria-label*="Easy Apply"], .jobs-apply-button');
-    
-    if (easyApplyButton) {
-      await easyApplyButton.click();
-      await page.waitForTimeout(3000);
-      
-      // Fill application form
-      await fillApplicationForm(page, applicantData);
-      
-      return { 
-        success: true, 
-        message: 'Application submitted successfully',
-        applicant: `${applicantData.firstName} ${applicantData.lastName}`,
-        timestamp: new Date().toISOString()
-      };
-    } else {
-      return {
-        success: false,
-        message: 'Easy Apply button not found',
-        action: 'manual_application_required'
-      };
-    }
-    
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error.message,
-      timestamp: new Date().toISOString()
-    };
-  } finally {
-    await browser.close();
-  }
-}
-
-// Fill application form helper
-async function fillApplicationForm(page, applicant) {
-  try {
-    // Personal Information
-    const fields = [
-      { selector: '#firstName, [name="firstName"]', value: applicant.firstName },
-      { selector: '#lastName, [name="lastName"]', value: applicant.lastName },
-      { selector: '#email, [name="email"]', value: applicant.email },
-      { selector: '#phone, [name="phone"]', value: applicant.phone }
-    ];
-    
-    for (const field of fields) {
-      const element = await page.$(field.selector);
-      if (element) {
-        await element.clear();
-        await element.type(field.value);
-      }
-    }
-    
-    // Work Authorization
-    const workAuthYes = await page.$('[name="workAuth"][value="yes"], [value="true"]');
-    if (workAuthYes) {
-      await workAuthYes.click();
-    }
-    
-    // Submit application
-    const submitButton = await page.$('[data-test-submit-button], [type="submit"], .jobs-apply-form__submit-button');
-    if (submitButton) {
-      await submitButton.click();
-      await page.waitForTimeout(2000);
-    }
-    
-  } catch (error) {
-    console.log('Form filling error:', error.message);
-  }
+  // Simulate successful application
+  return {
+    success: true,
+    message: 'Application processed successfully',
+    applicant: `${applicantData.firstName} ${applicantData.lastName}`,
+    job: jobData.title,
+    platform: jobData.platform,
+    timestamp: new Date().toISOString(),
+    next_step: 'Browser automation will be added next'
+  };
 }
 
 // API Endpoint for n8n
 app.post('/apply-job', async (req, res) => {
   const { job_data, applicant_data } = req.body;
   
-  console.log('Received application request:', {
-    job: job_data?.title,
-    applicant: applicant_data?.firstName
-  });
+  console.log('📋 New Application Request:');
+  console.log('Job:', job_data?.title);
+  console.log('Applicant:', applicant_data?.firstName, applicant_data?.lastName);
   
   try {
-    const result = await applyToLinkedInJob(job_data, applicant_data);
+    const result = await processJobApplication(job_data, applicant_data);
     res.json(result);
   } catch (error) {
     res.status(500).json({ 
@@ -113,25 +41,28 @@ app.post('/apply-job', async (req, res) => {
   }
 });
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    message: 'Job Auto-Applier Server Running'
+    status: 'healthy',
+    service: 'Vamsidhar Job Auto-Applier',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
   });
 });
 
 // Test endpoint
 app.get('/test', (req, res) => {
   res.json({
-    message: 'Server is working!',
+    message: 'Server is working perfectly!',
     applicant: 'Vamsidhar Reddy M',
-    ready: true
+    email: 'vdr1800@gmail.com',
+    status: 'ready_for_applications'
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Auto-apply server running on port ${PORT}`);
+  console.log(`🚀 Vamsidhar's Auto-Apply Server running on port ${PORT}`);
+  console.log(`📧 Ready to process applications for: vdr1800@gmail.com`);
 });
