@@ -46,7 +46,7 @@ const COMPLETE_APPLICANT_PROFILE = {
   university: "San Jose State University",
   degree: "Master of Science",
   major: "Computer Science",
-  startYear: "2022"
+  startYear: "2022",
   graduationYear: "2023",
   preferredSalary: "100000",
   availableStartDate: "Immediately",
