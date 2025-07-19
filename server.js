@@ -9,10 +9,10 @@ try {
   // Try to load Railway-compatible versions
   puppeteer = require('puppeteer-core');
   chromium = require('@sparticuz/chromium');
-  console.log(' Using Railway-optimized Puppeteer setup');
+  console.log('✅ Using Railway-optimized Puppeteer setup');
 } catch (e) {
   // Fallback to regular puppeteer for local development
-  console.log('Falling back to regular Puppeteer (local dev mode)');
+  console.log('⚠️ Falling back to regular Puppeteer (local dev mode)');
   puppeteer = require('puppeteer');
 }
 
@@ -22,7 +22,7 @@ app.use(express.json());
 
 // LinkedIn credentials
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'vdr1800@gmail.com';
-const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || ‘Vamsidhar@123’;
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'Vamsidhar@123';
 
 // Complete applicant profile
 const COMPLETE_APPLICANT_PROFILE = {
@@ -36,18 +36,18 @@ const COMPLETE_APPLICANT_PROFILE = {
   country: "US",
   zipCode: "95126",
   linkedinProfile: "https://www.linkedin.com/in/vamsidhar1800/",
-  portfolioWebsite: "https://www.linkedin.com/in/vamsidhar1800/",
+  portfolioWebsite: "https://github.com/vamsidhar1800",
   workAuthorization: "Yes",
   requiresSponsorship: "Yes",
   visaStatus: "F1 STEM OPT",
-  yearsOfExperience: "3",
+  yearsOfExperience: "2",
   currentJobTitle: "Software Engineer",
   currentCompany: "Genpact Global INC",
   university: "San Jose State University",
   degree: "Master of Science",
   major: "Computer Science",
+  startYear: "2022"
   graduationYear: "2023",
-
   preferredSalary: "100000",
   availableStartDate: "Immediately",
   willingToRelocate: "Yes",
@@ -68,7 +68,7 @@ Vamsidhar Reddy M`
 
 // Railway-optimized browser launch
 async function createBrowser() {
-  console.log('Launching browser for Railway environment...');
+  console.log('🚀 Launching browser for Railway environment...');
   
   try {
     if (chromium) {
@@ -107,15 +107,15 @@ async function createBrowser() {
       });
     }
   } catch (error) {
-    console.error('Browser launch failed:', error.message);
+    console.error('❌ Browser launch failed:', error.message);
     throw new Error('Failed to launch browser in Railway environment');
   }
 }
 
 // Enhanced LinkedIn Auto-Apply
 async function processLinkedInApplication(jobData, applicantData) {
-  console.log(`Starting LinkedIn application for: ${applicantData.firstName} ${applicantData.lastName}`);
-  console.log(`Job: ${jobData.title} at ${jobData.url}`);
+  console.log(`🎯 Starting LinkedIn application for: ${applicantData.firstName} ${applicantData.lastName}`);
+  console.log(`📋 Job: ${jobData.title} at ${jobData.url}`);
   
   let browser;
   let result = {
@@ -137,7 +137,7 @@ async function processLinkedInApplication(jobData, applicantData) {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1366, height: 768 });
 
-    console.log('Logging into LinkedIn...');
+    console.log('🔐 Logging into LinkedIn...');
     
     // Step 1: Login to LinkedIn
     await page.goto('https://www.linkedin.com/login', { 
@@ -160,17 +160,17 @@ async function processLinkedInApplication(jobData, applicantData) {
       throw new Error('LinkedIn security challenge detected - manual intervention required');
     }
 
-    console.log('LinkedIn login successful');
+    console.log('✅ LinkedIn login successful');
     
     // Step 2: Navigate to job posting
-    console.log(`Navigating to job: ${jobData.url}`);
+    console.log(`🔍 Navigating to job: ${jobData.url}`);
     await page.goto(jobData.url, { 
       waitUntil: 'networkidle2',
       timeout: 30000 
     });
 
     // Step 3: Find and click Easy Apply button
-    console.log('Looking for Easy Apply button...');
+    console.log('🔍 Looking for Easy Apply button...');
     
     const easyApplySelectors = [
       'button[aria-label*="Easy Apply"]',
@@ -188,7 +188,7 @@ async function processLinkedInApplication(jobData, applicantData) {
         if (easyApplyButton) {
           const buttonText = await easyApplyButton.evaluate(el => el.textContent);
           if (buttonText.toLowerCase().includes('easy apply')) {
-            console.log(`Found Easy Apply button: ${buttonText}`);
+            console.log(`✅ Found Easy Apply button: ${buttonText}`);
             break;
           }
         }
@@ -206,7 +206,7 @@ async function processLinkedInApplication(jobData, applicantData) {
     await easyApplyButton.click();
     await page.waitForTimeout(3000);
 
-    console.log('Starting comprehensive form filling process...');
+    console.log('📝 Starting comprehensive form filling process...');
 
     // Step 4: Handle application form with simplified approach for Railway
     const formResult = await fillApplicationFormSimplified(page, COMPLETE_APPLICANT_PROFILE);
@@ -222,7 +222,7 @@ async function processLinkedInApplication(jobData, applicantData) {
     };
 
   } catch (error) {
-    console.error('LinkedIn application error:', error.message);
+    console.error('❌ LinkedIn application error:', error.message);
     result.success = false;
     result.message = `Application failed: ${error.message}`;
     result.details.error = error.message;
@@ -241,10 +241,10 @@ async function fillApplicationFormSimplified(page, applicantData, maxSteps = 8) 
   let currentStep = 1;
   let applicationCompleted = false;
   
-  console.log('Starting Railway-optimized form filling...');
+  console.log('📝 Starting Railway-optimized form filling...');
   
   while (currentStep <= maxSteps && !applicationCompleted) {
-    console.log(`Processing step ${currentStep}...`);
+    console.log(`📄 Processing step ${currentStep}...`);
     
     try {
       await page.waitForTimeout(2000);
@@ -261,14 +261,14 @@ async function fillApplicationFormSimplified(page, applicantData, maxSteps = 8) 
       // Handle dropdowns
       await handleDropdownsSimplified(page, applicantData);
       
-      console.log(`Completed step ${currentStep}`);
+      console.log(`✅ Completed step ${currentStep}`);
       
       // Check for navigation
       const hasSubmit = await page.$('button[aria-label*="Submit"], button:has-text("Submit")');
       const hasNext = await page.$('button[aria-label*="Continue"], button:has-text("Next")');
       
       if (hasSubmit) {
-        console.log('Submitting application...');
+        console.log('🎯 Submitting application...');
         await hasSubmit.click();
         await page.waitForTimeout(3000);
         
@@ -281,11 +281,11 @@ async function fillApplicationFormSimplified(page, applicantData, maxSteps = 8) 
         
         if (success) {
           applicationCompleted = true;
-          console.log('Application submitted successfully!');
+          console.log('🎉 Application submitted successfully!');
         }
         break;
       } else if (hasNext) {
-        console.log('Continuing to next step...');
+        console.log('➡️ Continuing to next step...');
         await hasNext.click();
         await page.waitForTimeout(2000);
         currentStep++;
@@ -294,7 +294,7 @@ async function fillApplicationFormSimplified(page, applicantData, maxSteps = 8) 
       }
       
     } catch (stepError) {
-      console.error(`Error on step ${currentStep}:`, stepError.message);
+      console.error(`❌ Error on step ${currentStep}:`, stepError.message);
       break;
     }
   }
@@ -322,7 +322,7 @@ async function fillBasicFieldsSimplified(page, data) {
       if (element && field.value) {
         await element.click({ clickCount: 3 });
         await element.type(field.value);
-        console.log(`Filled: ${field.selector}`);
+        console.log(`✅ Filled: ${field.selector}`);
       }
     } catch (e) {
       continue;
@@ -339,12 +339,12 @@ async function handleWorkAuthSimplified(page, data) {
         const yesButton = await section.$('input[value*="yes"], input[value*="Yes"]');
         if (yesButton) {
           await yesButton.click();
-          console.log('Answered work authorization question');
+          console.log('✅ Answered work authorization question');
         }
       }
     }
   } catch (e) {
-    console.log('Could not handle work auth questions');
+    console.log('⚠️ Could not handle work auth questions');
   }
 }
 
@@ -359,12 +359,12 @@ async function fillTextAreasSimplified(page, data) {
       if (context.includes('cover')) {
         await textArea.click();
         await textArea.type(data.coverLetter);
-        console.log('Filled cover letter');
+        console.log('✅ Filled cover letter');
         break;
       }
     }
   } catch (e) {
-    console.log('Could not fill text areas');
+    console.log('⚠️ Could not fill text areas');
   }
 }
 
@@ -375,11 +375,11 @@ async function handleDropdownsSimplified(page, data) {
       const options = await select.$$('option');
       if (options.length > 1) {
         await select.selectValue(options[1].evaluate(el => el.value));
-        console.log('Selected dropdown option');
+        console.log('✅ Selected dropdown option');
       }
     }
   } catch (e) {
-    console.log('Could not handle dropdowns');
+    console.log('⚠️ Could not handle dropdowns');
   }
 }
 
@@ -387,7 +387,7 @@ async function handleDropdownsSimplified(page, data) {
 app.post('/apply-job', async (req, res) => {
   const { job_data, applicant_data } = req.body;
   
-  console.log('New Railway-Optimized LinkedIn Application:');
+  console.log('📋 New Railway-Optimized LinkedIn Application:');
   console.log('Job:', job_data?.title);
   console.log('URL:', job_data?.url);
   console.log('Applicant:', applicant_data?.firstName, applicant_data?.lastName);
@@ -407,7 +407,7 @@ app.post('/apply-job', async (req, res) => {
     res.json(result);
     
   } catch (error) {
-    console.error('Application error:', error);
+    console.error('❌ Application error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -443,7 +443,7 @@ app.get('/test', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Railway-Optimized LinkedIn Auto-Apply Server running on port ${PORT}`);
-  console.log(`Ready for: ${LINKEDIN_EMAIL}`);
-  console.log(`Puppeteer setup: ${chromium ? 'Railway-optimized' : 'Local development'}`);
+  console.log(`🚀 Railway-Optimized LinkedIn Auto-Apply Server running on port ${PORT}`);
+  console.log(`📧 Ready for: ${LINKEDIN_EMAIL}`);
+  console.log(`🤖 Puppeteer setup: ${chromium ? 'Railway-optimized' : 'Local development'}`);
 });
