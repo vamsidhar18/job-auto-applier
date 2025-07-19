@@ -22,11 +22,11 @@ app.use(express.json());
 
 // LinkedIn credentials
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'vdr1800@gmail.com';
-const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'your_password';
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'Vamsidhar@123';
 
 // Gmail credentials for email verification
 const GMAIL_EMAIL = process.env.GMAIL_EMAIL || 'vdr1800@gmail.com';
-const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD || 'your_gmail_app_password';
+const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD || 'Vamsidhar@16';
 
 // Updated applicant profile with your correct details
 const COMPLETE_APPLICANT_PROFILE = {
