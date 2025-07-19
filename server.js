@@ -40,7 +40,7 @@ const COMPLETE_APPLICANT_PROFILE = {
   workAuthorization: "Yes",
   requiresSponsorship: "Yes",
   visaStatus: "F1 STEM OPT",
-  yearsOfExperience: "2",
+  yearsOfExperience: "3",
   currentJobTitle: "Software Engineer",
   currentCompany: "Genpact Global INC",
   university: "San Jose State University",
