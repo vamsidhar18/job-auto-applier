@@ -1,148 +1,301 @@
-// Enhanced LinkedIn Form Handler - Handles ALL possible application questions
+const express = require('express');
+const cors = require('cors');
 
-// Complete applicant profile with all possible data
+// Railway-optimized Puppeteer setup
+let puppeteer;
+let chromium;
+
+try {
+  // Try to load Railway-compatible versions
+  puppeteer = require('puppeteer-core');
+  chromium = require('@sparticuz/chromium');
+  console.log(' Using Railway-optimized Puppeteer setup');
+} catch (e) {
+  // Fallback to regular puppeteer for local development
+  console.log('Falling back to regular Puppeteer (local dev mode)');
+  puppeteer = require('puppeteer');
+}
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// LinkedIn credentials
+const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'vdr1800@gmail.com';
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'Vamsidhar@123';
+
+// Complete applicant profile
 const COMPLETE_APPLICANT_PROFILE = {
-  // Basic Info
   firstName: "Vamsidhar Reddy",
   lastName: "M",
   email: "vdr1800@gmail.com",
   phone: "+16692928219",
-  
-  // Location
   address: "754 The Alameda",
   city: "San Jose",
   state: "CA",
   country: "US",
   zipCode: "95126",
-  
-  // Professional
   linkedinProfile: "https://www.linkedin.com/in/vamsidhar1800/",
   portfolioWebsite: "https://www.linkedin.com/in/vamsidhar1800/",
-  
-  // Work Authorization
   workAuthorization: "Yes",
   requiresSponsorship: "Yes",
   visaStatus: "F1 STEM OPT",
-  
-  // Experience
   yearsOfExperience: "3",
   currentJobTitle: "Software Engineer",
-  currentCompany: "Genpact Global INC ",
-  
-  // Education
+  currentCompany: "Genpact Global INC",
   university: "San Jose State University",
   degree: "Master of Science",
-  major: "Software Engineer",
+  major: "Computer Science",
   graduationYear: "2023",
-  
-  
-  // Skills & Preferences
-  preferredSalary: "90000",
+
+  preferredSalary: "100000",
   availableStartDate: "Immediately",
   willingToRelocate: "Yes",
   remoteWork: "Yes",
-  
-  // Cover Letter
   coverLetter: `Dear Hiring Manager,
 
 I am excited to apply for this Software Engineer position. As a recent MS Computer Science graduate from San Jose State University with hands-on experience in full-stack development, I am eager to contribute to your team.
 
-My technical expertise includes JavaScript, Python, React, Node.js, and cloud technologies. I have successfully built and deployed web applications, worked with databases, and implemented automated systems like the job application system I'm currently using.
+My technical expertise includes JavaScript, Python, React, Node.js, and cloud technologies. I have successfully built and deployed web applications, worked with databases, and implemented automated systems.
 
 As an F1 STEM OPT holder, I am authorized to work and seeking sponsorship opportunities. I am passionate about creating efficient, scalable solutions and would love to bring my skills to your organization.
 
 Thank you for considering my application. I look forward to discussing how I can contribute to your team.
 
 Best regards,
-Vamsidhar Reddy M`,
-
-  // Resume file path (you'll need to upload this to your server)
-  resumePath: "/app/resume.pdf" // We'll handle file upload
+Vamsidhar Reddy M`
 };
 
-// Advanced form filling function that handles ALL question types
-async function fillAdvancedApplicationForm(page, applicantData, maxSteps = 10) {
+// Railway-optimized browser launch
+async function createBrowser() {
+  console.log('Launching browser for Railway environment...');
+  
+  try {
+    if (chromium) {
+      // Railway/Production environment with chromium
+      return await puppeteer.launch({
+        args: [
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
+        ],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
+    } else {
+      // Local development fallback
+      return await puppeteer.launch({
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu'
+        ]
+      });
+    }
+  } catch (error) {
+    console.error('Browser launch failed:', error.message);
+    throw new Error('Failed to launch browser in Railway environment');
+  }
+}
+
+// Enhanced LinkedIn Auto-Apply
+async function processLinkedInApplication(jobData, applicantData) {
+  console.log(`Starting LinkedIn application for: ${applicantData.firstName} ${applicantData.lastName}`);
+  console.log(`Job: ${jobData.title} at ${jobData.url}`);
+  
+  let browser;
+  let result = {
+    success: false,
+    message: '',
+    applicant: `${applicantData.firstName} ${applicantData.lastName}`,
+    job: jobData.title,
+    platform: 'linkedin',
+    timestamp: new Date().toISOString(),
+    details: {}
+  };
+
+  try {
+    // Launch Railway-optimized browser
+    browser = await createBrowser();
+    const page = await browser.newPage();
+    
+    // Set realistic user agent and viewport
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1366, height: 768 });
+
+    console.log('Logging into LinkedIn...');
+    
+    // Step 1: Login to LinkedIn
+    await page.goto('https://www.linkedin.com/login', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+
+    await page.waitForSelector('#username', { timeout: 10000 });
+    await page.type('#username', LINKEDIN_EMAIL);
+    await page.type('#password', LINKEDIN_PASSWORD);
+    
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })
+    ]);
+
+    // Check for security challenges
+    const currentUrl = page.url();
+    if (currentUrl.includes('/challenge') || currentUrl.includes('/checkpoint')) {
+      throw new Error('LinkedIn security challenge detected - manual intervention required');
+    }
+
+    console.log('LinkedIn login successful');
+    
+    // Step 2: Navigate to job posting
+    console.log(`Navigating to job: ${jobData.url}`);
+    await page.goto(jobData.url, { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+
+    // Step 3: Find and click Easy Apply button
+    console.log('Looking for Easy Apply button...');
+    
+    const easyApplySelectors = [
+      'button[aria-label*="Easy Apply"]',
+      'button:has-text("Easy Apply")',
+      '.jobs-apply-button--top-card button',
+      '.jobs-s-apply button',
+      'button[data-control-name="jobdetails_topcard_inapply"]',
+      '.jobs-apply-button button'
+    ];
+
+    let easyApplyButton = null;
+    for (const selector of easyApplySelectors) {
+      try {
+        easyApplyButton = await page.$(selector);
+        if (easyApplyButton) {
+          const buttonText = await easyApplyButton.evaluate(el => el.textContent);
+          if (buttonText.toLowerCase().includes('easy apply')) {
+            console.log(`Found Easy Apply button: ${buttonText}`);
+            break;
+          }
+        }
+        easyApplyButton = null;
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (!easyApplyButton) {
+      throw new Error('Easy Apply button not found - job may not support Easy Apply');
+    }
+
+    // Click Easy Apply
+    await easyApplyButton.click();
+    await page.waitForTimeout(3000);
+
+    console.log('Starting comprehensive form filling process...');
+
+    // Step 4: Handle application form with simplified approach for Railway
+    const formResult = await fillApplicationFormSimplified(page, COMPLETE_APPLICANT_PROFILE);
+    
+    result.success = formResult.completed;
+    result.message = formResult.completed ? 
+      'Application submitted successfully via Railway-optimized automation' : 
+      'Application process completed but submission status unclear';
+    result.details = {
+      stepsProcessed: formResult.stepsProcessed,
+      formStatus: formResult.status,
+      environment: 'railway-optimized'
+    };
+
+  } catch (error) {
+    console.error('LinkedIn application error:', error.message);
+    result.success = false;
+    result.message = `Application failed: ${error.message}`;
+    result.details.error = error.message;
+    result.details.environment = 'railway-optimized';
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+
+  return result;
+}
+
+// Simplified form filling optimized for Railway
+async function fillApplicationFormSimplified(page, applicantData, maxSteps = 8) {
   let currentStep = 1;
   let applicationCompleted = false;
   
-  console.log('📝 Starting advanced LinkedIn application form filling...');
+  console.log('Starting Railway-optimized form filling...');
   
   while (currentStep <= maxSteps && !applicationCompleted) {
-    console.log(`📄 Processing application step ${currentStep}...`);
+    console.log(`Processing step ${currentStep}...`);
     
     try {
-      await page.waitForTimeout(3000); // Wait for form to load
+      await page.waitForTimeout(2000);
       
-      // 1. BASIC INFORMATION FIELDS
-      await fillBasicFields(page, applicantData);
+      // Fill basic fields
+      await fillBasicFieldsSimplified(page, applicantData);
       
-      // 2. DROPDOWN SELECTIONS
-      await handleDropdowns(page, applicantData);
+      // Handle work authorization
+      await handleWorkAuthSimplified(page, applicantData);
       
-      // 3. RESUME UPLOAD
-      await handleResumeUpload(page, applicantData);
+      // Fill text areas
+      await fillTextAreasSimplified(page, applicantData);
       
-      // 4. WORK AUTHORIZATION QUESTIONS
-      await handleWorkAuthQuestions(page, applicantData);
+      // Handle dropdowns
+      await handleDropdownsSimplified(page, applicantData);
       
-      // 5. EXPERIENCE QUESTIONS
-      await handleExperienceQuestions(page, applicantData);
+      console.log(`Completed step ${currentStep}`);
       
-      // 6. EDUCATION QUESTIONS
-      await handleEducationQuestions(page, applicantData);
-      
-      // 7. SALARY & PREFERENCES
-      await handleSalaryQuestions(page, applicantData);
-      
-      // 8. COVER LETTER
-      await handleCoverLetter(page, applicantData);
-      
-      // 9. CUSTOM TEXT QUESTIONS
-      await handleCustomQuestions(page, applicantData);
-      
-      // 10. MULTIPLE CHOICE QUESTIONS
-      await handleMultipleChoice(page, applicantData);
-      
-      console.log(`✅ Completed filling form fields for step ${currentStep}`);
-      
-      // Look for navigation buttons
-      const { hasNext, hasSubmit, hasReview } = await checkNavigationButtons(page);
+      // Check for navigation
+      const hasSubmit = await page.$('button[aria-label*="Submit"], button:has-text("Submit")');
+      const hasNext = await page.$('button[aria-label*="Continue"], button:has-text("Next")');
       
       if (hasSubmit) {
-        console.log('🎯 Found Submit button - submitting application...');
-        await clickSubmitButton(page);
-        applicationCompleted = await verifySubmission(page);
+        console.log('Submitting application...');
+        await hasSubmit.click();
+        await page.waitForTimeout(3000);
+        
+        // Simple success check
+        const success = await page.evaluate(() => {
+          return document.body.textContent.toLowerCase().includes('submitted') ||
+                 document.body.textContent.toLowerCase().includes('success') ||
+                 window.location.href.includes('success');
+        });
+        
+        if (success) {
+          applicationCompleted = true;
+          console.log('Application submitted successfully!');
+        }
         break;
-      } else if (hasReview) {
-        console.log('👀 Found Review button - going to review step...');
-        await clickReviewButton(page);
-        currentStep++;
       } else if (hasNext) {
-        console.log('➡️ Found Next button - continuing to next step...');
-        await clickNextButton(page);
+        console.log('Continuing to next step...');
+        await hasNext.click();
+        await page.waitForTimeout(2000);
         currentStep++;
       } else {
-        console.log('❓ No clear navigation found, attempting to find any submit button...');
-        const submitted = await attemptSubmission(page);
-        if (submitted) {
-          applicationCompleted = true;
-          break;
-        } else {
-          throw new Error(`No navigation buttons found on step ${currentStep}`);
-        }
+        throw new Error(`No navigation found on step ${currentStep}`);
       }
       
     } catch (stepError) {
-      console.error(`❌ Error on step ${currentStep}:`, stepError.message);
-      
-      // Try to continue anyway
-      const continueAnyway = await attemptToContinue(page);
-      if (continueAnyway) {
-        currentStep++;
-        continue;
-      } else {
-        throw new Error(`Failed on step ${currentStep}: ${stepError.message}`);
-      }
+      console.error(`Error on step ${currentStep}:`, stepError.message);
+      break;
     }
   }
   
@@ -153,312 +306,144 @@ async function fillAdvancedApplicationForm(page, applicantData, maxSteps = 10) {
   };
 }
 
-// 1. Basic information fields
-async function fillBasicFields(page, data) {
-  const basicFields = [
-    { selectors: ['input[name*="firstName"]', 'input[id*="first"]', 'input[placeholder*="First name" i]'], value: data.firstName },
-    { selectors: ['input[name*="lastName"]', 'input[id*="last"]', 'input[placeholder*="Last name" i]'], value: data.lastName },
-    { selectors: ['input[name*="email"]', 'input[type="email"]'], value: data.email },
-    { selectors: ['input[name*="phone"]', 'input[type="tel"]'], value: data.phone },
-    { selectors: ['input[name*="address"]', 'input[placeholder*="address" i]'], value: data.address },
-    { selectors: ['input[name*="city"]', 'input[placeholder*="city" i]'], value: data.city },
-    { selectors: ['input[name*="state"]', 'input[placeholder*="state" i]'], value: data.state },
-    { selectors: ['input[name*="zip"]', 'input[placeholder*="zip" i]'], value: data.zipCode },
-    { selectors: ['input[name*="linkedin"]', 'input[placeholder*="linkedin" i]'], value: data.linkedinProfile },
-    { selectors: ['input[name*="website"]', 'input[placeholder*="portfolio" i]'], value: data.portfolioWebsite }
+// Simplified helper functions
+async function fillBasicFieldsSimplified(page, data) {
+  const fields = [
+    { selector: 'input[name*="first"], input[id*="first"]', value: data.firstName },
+    { selector: 'input[name*="last"], input[id*="last"]', value: data.lastName },
+    { selector: 'input[type="email"]', value: data.email },
+    { selector: 'input[type="tel"], input[name*="phone"]', value: data.phone },
+    { selector: 'input[name*="city"]', value: data.city },
   ];
   
-  for (const field of basicFields) {
-    await fillFieldBySelectors(page, field.selectors, field.value);
-  }
-}
-
-// 2. Handle dropdown selections
-async function handleDropdowns(page, data) {
-  const dropdowns = await page.$$('select, [role="combobox"], .artdeco-dropdown');
-  
-  for (const dropdown of dropdowns) {
+  for (const field of fields) {
     try {
-      const label = await getFieldLabel(page, dropdown);
-      const labelText = label.toLowerCase();
-      
-      if (labelText.includes('country')) {
-        await selectDropdownOption(page, dropdown, ['United States', 'US', 'USA']);
-      } else if (labelText.includes('state') || labelText.includes('province')) {
-        await selectDropdownOption(page, dropdown, ['California', 'CA']);
-      } else if (labelText.includes('experience') || labelText.includes('years')) {
-        await selectDropdownOption(page, dropdown, ['2', '1-3 years', '2 years', '3 years'], '3', '3.5+');
-      } else if (labelText.includes('education') || labelText.includes('degree')) {
-        await selectDropdownOption(page, dropdown, ['Master', 'Masters', 'MS', 'Graduate']);
+      const element = await page.$(field.selector);
+      if (element && field.value) {
+        await element.click({ clickCount: 3 });
+        await element.type(field.value);
+        console.log(`Filled: ${field.selector}`);
       }
     } catch (e) {
-      console.log('⚠️ Could not handle dropdown:', e.message);
+      continue;
     }
   }
 }
 
-// 3. Handle resume upload
-async function handleResumeUpload(page, data) {
-  const uploadSelectors = [
-    'input[type="file"]',
-    'input[accept*="pdf"]',
-    'input[accept*="doc"]',
-    '[data-test-file-upload-input]'
-  ];
-  
-  for (const selector of uploadSelectors) {
-    try {
-      const uploadField = await page.$(selector);
-      if (uploadField) {
-        // Check if we have a resume file available
-        if (data.resumePath && require('fs').existsSync(data.resumePath)) {
-          await uploadField.uploadFile(data.resumePath);
-          console.log('✅ Resume uploaded successfully');
-        } else {
-          console.log('⚠️ Resume file not found, skipping upload');
+async function handleWorkAuthSimplified(page, data) {
+  try {
+    const sections = await page.$$('fieldset, .fb-dash-form-element');
+    for (const section of sections) {
+      const text = await section.evaluate(el => el.textContent.toLowerCase());
+      if (text.includes('authorized') || text.includes('sponsorship')) {
+        const yesButton = await section.$('input[value*="yes"], input[value*="Yes"]');
+        if (yesButton) {
+          await yesButton.click();
+          console.log('Answered work authorization question');
         }
+      }
+    }
+  } catch (e) {
+    console.log('Could not handle work auth questions');
+  }
+}
+
+async function fillTextAreasSimplified(page, data) {
+  try {
+    const textAreas = await page.$$('textarea');
+    for (const textArea of textAreas) {
+      const context = await textArea.evaluate(el => 
+        (el.getAttribute('aria-label') || el.getAttribute('placeholder') || '').toLowerCase()
+      );
+      
+      if (context.includes('cover')) {
+        await textArea.click();
+        await textArea.type(data.coverLetter);
+        console.log('Filled cover letter');
         break;
       }
-    } catch (e) {
-      continue;
     }
-  }
-}
-
-// 4. Work authorization questions
-async function handleWorkAuthQuestions(page, data) {
-  const questions = await page.$$('fieldset, .jobs-easy-apply-form-section, .fb-dash-form-element');
-  
-  for (const question of questions) {
-    try {
-      const questionText = await question.evaluate(el => el.textContent.toLowerCase());
-      
-      if (questionText.includes('authorized to work') || questionText.includes('work authorization')) {
-        await selectAnswer(page, question, 'yes', data.workAuthorization);
-      } else if (questionText.includes('sponsorship') || questionText.includes('visa sponsor')) {
-        await selectAnswer(page, question, 'yes', data.requiresSponsorship);
-      } else if (questionText.includes('visa status') || questionText.includes('current visa')) {
-        await fillTextInSection(page, question, data.visaStatus);
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-}
-
-// 5. Experience questions
-async function handleExperienceQuestions(page, data) {
-  const experienceFields = [
-    { keywords: ['years of experience', 'experience in'], value: data.yearsOfExperience },
-    { keywords: ['current title', 'job title'], value: data.currentJobTitle },
-    { keywords: ['current company', 'employer'], value: data.currentCompany },
-    { keywords: ['notice period', 'start date'], value: data.availableStartDate }
-  ];
-  
-  for (const field of experienceFields) {
-    await fillFieldByKeywords(page, field.keywords, field.value);
-  }
-}
-
-// 6. Education questions
-async function handleEducationQuestions(page, data) {
-  const educationFields = [
-    { keywords: ['university', 'school', 'college'], value: data.university },
-    { keywords: ['degree', 'education level'], value: data.degree },
-    { keywords: ['major', 'field of study'], value: data.major },
-    { keywords: ['graduation', 'graduation year'], value: data.graduationYear },
-    { keywords: ['gpa', 'grade point'], value: data.gpa }
-  ];
-  
-  for (const field of educationFields) {
-    await fillFieldByKeywords(page, field.keywords, field.value);
-  }
-}
-
-// 7. Salary and preferences
-async function handleSalaryQuestions(page, data) {
-  const salaryFields = [
-    { keywords: ['salary', 'compensation', 'expected salary'], value: data.preferredSalary },
-    { keywords: ['relocate', 'relocation'], value: data.willingToRelocate },
-    { keywords: ['remote', 'work from home'], value: data.remoteWork }
-  ];
-  
-  for (const field of salaryFields) {
-    await fillFieldByKeywords(page, field.keywords, field.value);
-  }
-}
-
-// 8. Cover letter
-async function handleCoverLetter(page, data) {
-  const coverLetterSelectors = [
-    'textarea[name*="cover"]',
-    'textarea[placeholder*="cover" i]',
-    'textarea[aria-label*="cover" i]',
-    '.jobs-easy-apply-form-section textarea'
-  ];
-  
-  for (const selector of coverLetterSelectors) {
-    const field = await page.$(selector);
-    if (field) {
-      await field.click();
-      await field.type(data.coverLetter);
-      console.log('✅ Cover letter filled');
-      break;
-    }
-  }
-}
-
-// 9. Custom text questions
-async function handleCustomQuestions(page, data) {
-  const textAreas = await page.$$('textarea:not([name*="cover"])');
-  const textInputs = await page.$$('input[type="text"]:not([name*="firstName"]):not([name*="lastName"]):not([name*="email"])');
-  
-  const genericAnswers = {
-    'why interested': `I am excited about this opportunity because it aligns perfectly with my technical skills and career goals. Your company's innovative approach and growth potential make it an ideal place for me to contribute and develop professionally.`,
-    'why should we hire': `You should hire me because I bring a unique combination of technical expertise, fresh perspective, and strong problem-solving skills. My recent education in Computer Science and hands-on project experience make me well-equipped to contribute immediately to your team.`,
-    'additional information': `I am passionate about software development and continuously learning new technologies. I am particularly interested in full-stack development, cloud technologies, and building scalable applications. I am eager to bring my enthusiasm and technical skills to your organization.`
-  };
-  
-  // Handle remaining text fields with intelligent responses
-  for (const field of [...textAreas, ...textInputs]) {
-    try {
-      const label = await getFieldLabel(page, field);
-      const labelLower = label.toLowerCase();
-      
-      if (labelLower.includes('why') && labelLower.includes('interest')) {
-        await field.type(genericAnswers['why interested']);
-      } else if (labelLower.includes('why') && (labelLower.includes('hire') || labelLower.includes('choose'))) {
-        await field.type(genericAnswers['why should we hire']);
-      } else if (labelLower.includes('additional') || labelLower.includes('anything else')) {
-        await field.type(genericAnswers['additional information']);
-      } else if (labelLower.includes('motivation') || labelLower.includes('passion')) {
-        await field.type('I am passionate about creating innovative software solutions and contributing to meaningful projects that make a positive impact.');
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-}
-
-// 10. Multiple choice questions
-async function handleMultipleChoice(page, data) {
-  const radioGroups = await page.$$('fieldset[role="radiogroup"], .fb-dash-form-element');
-  
-  for (const group of radioGroups) {
-    try {
-      const questionText = await group.evaluate(el => el.textContent.toLowerCase());
-      
-      // Default to positive answers for most questions
-      if (questionText.includes('willing') || questionText.includes('able') || questionText.includes('comfortable')) {
-        await selectAnswer(page, group, 'yes', 'Yes');
-      } else if (questionText.includes('require') && questionText.includes('training')) {
-        await selectAnswer(page, group, 'no', 'No');
-      } else if (questionText.includes('notice period')) {
-        await selectAnswer(page, group, '2 weeks', 'Immediately');
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-}
-
-// Helper functions for form interaction
-async function fillFieldBySelectors(page, selectors, value) {
-  for (const selector of selectors) {
-    try {
-      const field = await page.$(selector);
-      if (field && value) {
-        await field.click({ clickCount: 3 });
-        await field.type(value);
-        console.log(`✅ Filled field ${selector}`);
-        return true;
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-  return false;
-}
-
-async function fillFieldByKeywords(page, keywords, value) {
-  for (const keyword of keywords) {
-    const fields = await page.$$(`input, textarea, select`);
-    for (const field of fields) {
-      try {
-        const label = await getFieldLabel(page, field);
-        if (label.toLowerCase().includes(keyword) && value) {
-          await field.click({ clickCount: 3 });
-          await field.type(value);
-          console.log(`✅ Filled field with keyword "${keyword}"`);
-          return true;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-  }
-  return false;
-}
-
-async function getFieldLabel(page, field) {
-  try {
-    // Try multiple ways to get the label
-    const label = await field.evaluate(el => {
-      // Check for aria-label
-      if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
-      
-      // Check for placeholder
-      if (el.getAttribute('placeholder')) return el.getAttribute('placeholder');
-      
-      // Check for associated label
-      const id = el.getAttribute('id');
-      if (id) {
-        const label = document.querySelector(`label[for="${id}"]`);
-        if (label) return label.textContent;
-      }
-      
-      // Check parent elements for text content
-      let parent = el.parentElement;
-      while (parent && parent.textContent.length < 200) {
-        const text = parent.textContent.trim();
-        if (text) return text;
-        parent = parent.parentElement;
-      }
-      
-      return '';
-    });
-    return label || '';
   } catch (e) {
-    return '';
+    console.log('Could not fill text areas');
   }
 }
 
-async function selectAnswer(page, section, preferredValue, fallbackValue) {
+async function handleDropdownsSimplified(page, data) {
   try {
-    const inputs = await section.$$('input[type="radio"], input[type="checkbox"]');
-    for (const input of inputs) {
-      const value = await input.evaluate(el => el.value || el.getAttribute('aria-label') || '');
-      if (value.toLowerCase().includes(preferredValue.toLowerCase())) {
-        await input.click();
-        console.log(`✅ Selected answer: ${value}`);
-        return true;
+    const selects = await page.$$('select');
+    for (const select of selects) {
+      const options = await select.$$('option');
+      if (options.length > 1) {
+        await select.selectValue(options[1].evaluate(el => el.value));
+        console.log('Selected dropdown option');
       }
     }
+  } catch (e) {
+    console.log('Could not handle dropdowns');
+  }
+}
+
+// API endpoint
+app.post('/apply-job', async (req, res) => {
+  const { job_data, applicant_data } = req.body;
+  
+  console.log('New Railway-Optimized LinkedIn Application:');
+  console.log('Job:', job_data?.title);
+  console.log('URL:', job_data?.url);
+  console.log('Applicant:', applicant_data?.firstName, applicant_data?.lastName);
+  
+  try {
+    if (!job_data?.url || !job_data.url.includes('linkedin.com')) {
+      return res.json({
+        success: false,
+        message: 'Only LinkedIn jobs are supported',
+        applicant: `${applicant_data?.firstName} ${applicant_data?.lastName}`,
+        job: job_data?.title,
+        platform: 'other'
+      });
+    }
+
+    const result = await processLinkedInApplication(job_data, applicant_data);
+    res.json(result);
     
-    // Fallback to first available option
-    if (inputs.length > 0) {
-      await inputs[0].click();
-      console.log('✅ Selected fallback answer');
-      return true;
-    }
-  } catch (e) {
-    console.log('⚠️ Could not select answer:', e.message);
+  } catch (error) {
+    console.error('Application error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      applicant: `${applicant_data?.firstName} ${applicant_data?.lastName}`,
+      job: job_data?.title
+    });
   }
-  return false;
-}
+});
 
-// Export the enhanced form handler
-module.exports = {
-  fillAdvancedApplicationForm,
-  COMPLETE_APPLICANT_PROFILE
-};
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    service: 'Railway-Optimized LinkedIn Auto-Applier',
+    version: '3.1.0',
+    environment: process.env.RAILWAY_ENVIRONMENT || 'local',
+    puppeteer: chromium ? 'chromium' : 'standard',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test endpoint
+app.get('/test', (req, res) => {
+  res.json({
+    message: 'Railway-Optimized LinkedIn Auto-Apply Server is ready!',
+    applicant: 'Vamsidhar Reddy M',
+    email: 'vdr1800@gmail.com',
+    status: 'ready_for_railway_applications',
+    environment: process.env.RAILWAY_ENVIRONMENT || 'local',
+    puppeteer_setup: chromium ? 'railway-optimized' : 'local-development'
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Railway-Optimized LinkedIn Auto-Apply Server running on port ${PORT}`);
+  console.log(`Ready for: ${LINKEDIN_EMAIL}`);
+  console.log(`Puppeteer setup: ${chromium ? 'Railway-optimized' : 'Local development'}`);
+});
