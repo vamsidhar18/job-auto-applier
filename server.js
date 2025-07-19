@@ -20,7 +20,7 @@ app.use(express.json());
 
 // LinkedIn credentials
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'vdr1800@gmail.com';
-const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'Vamsidhar@16';
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || 'Vamsidha@123';
 
 // Updated applicant profile with your correct details
 const COMPLETE_APPLICANT_PROFILE = {
@@ -64,9 +64,9 @@ Best regards,
 Vamsidhar Reddy M`
 };
 
-// Railway-optimized browser launch with enhanced stealth
+// Simple browser launch
 async function createBrowser() {
-  console.log('🚀 Launching stealth browser for Railway environment...');
+  console.log('🚀 Launching browser...');
   
   try {
     if (chromium) {
@@ -81,13 +81,7 @@ async function createBrowser() {
           '--no-zygote',
           '--disable-gpu',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-extensions',
-          '--no-default-browser-check',
-          '--disable-infobars',
-          '--disable-notifications',
-          '--disable-save-password-bubble'
+          '--disable-features=VizDisplayCompositor'
         ],
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
@@ -104,138 +98,84 @@ async function createBrowser() {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu',
-          '--disable-blink-features=AutomationControlled'
+          '--disable-gpu'
         ]
       });
     }
   } catch (error) {
     console.error('❌ Browser launch failed:', error.message);
-    throw new Error('Failed to launch browser in Railway environment');
+    throw new Error('Failed to launch browser');
   }
 }
 
-// Enhanced stealth LinkedIn login with retry mechanism
-async function linkedInLoginWithRetry(page, maxRetries = 3) {
-  console.log('🔐 Attempting stealth LinkedIn login...');
+// Simple LinkedIn login
+async function simpleLinkedInLogin(page) {
+  console.log('🔐 Attempting LinkedIn login...');
   
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`🔄 Login attempt ${attempt}/${maxRetries}`);
-      
-      // Add stealth measures
-      await page.evaluateOnNewDocument(() => {
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => undefined,
-        });
-      });
-      
-      await page.evaluateOnNewDocument(() => {
-        window.navigator.chrome = {
-          runtime: {},
-        };
-      });
-      
-      await page.evaluateOnNewDocument(() => {
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => [1, 2, 3, 4, 5],
-        });
-      });
-      
-      // Go to LinkedIn login with random delay
-      await page.goto('https://www.linkedin.com/login', { 
-        waitUntil: 'networkidle2',
-        timeout: 30000 
-      });
-      
-      // Random delay between 1-3 seconds
-      await page.waitForTimeout(1000 + Math.random() * 2000);
+  try {
+    await page.goto('https://www.linkedin.com/login', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
 
-      // Enter credentials with human-like typing
-      await page.waitForSelector('#username', { timeout: 10000 });
-      
-      // Type email slowly
-      await page.click('#username');
-      await page.waitForTimeout(500);
-      for (const char of LINKEDIN_EMAIL) {
-        await page.type('#username', char, { delay: 50 + Math.random() * 100 });
-      }
-      
-      await page.waitForTimeout(500);
-      
-      // Type password slowly
-      await page.click('#password');
-      await page.waitForTimeout(500);
-      for (const char of LINKEDIN_PASSWORD) {
-        await page.type('#password', char, { delay: 50 + Math.random() * 100 });
-      }
-      
-      await page.waitForTimeout(1000);
-      
-      // Click submit with delay
-      await Promise.all([
-        page.click('button[type="submit"]'),
-        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {})
-      ]);
+    await page.waitForSelector('#username', { timeout: 10000 });
+    await page.type('#username', LINKEDIN_EMAIL);
+    await page.type('#password', LINKEDIN_PASSWORD);
+    
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {})
+    ]);
 
-      const currentUrl = page.url();
-      console.log(`🔍 Current URL after login attempt ${attempt}: ${currentUrl}`);
+    const currentUrl = page.url();
+    console.log(`Current URL: ${currentUrl}`);
 
-      // Check for successful login
-      if (currentUrl.includes('/feed') || currentUrl.includes('/in/') || currentUrl.includes('/mynetwork')) {
-        console.log('✅ LinkedIn login successful!');
-        return true;
-      } else if (currentUrl.includes('/challenge') || currentUrl.includes('/checkpoint')) {
-        console.log(`⚠️ Security challenge detected on attempt ${attempt}`);
-        
-        if (attempt < maxRetries) {
-          console.log('🔄 Waiting before retry...');
-          await page.waitForTimeout(5000 + Math.random() * 5000); // Wait 5-10 seconds
-          continue;
-        } else {
-          // On final attempt, try to handle challenge manually
-          console.log('🚨 Final attempt - trying to handle challenge...');
-          
-          // Look for "Not now" or "Skip" buttons
-          const skipButtons = await page.$$('button');
-          for (const button of skipButtons) {
-            const text = await button.evaluate(el => el.textContent.toLowerCase());
-            if (text.includes('not now') || text.includes('skip') || text.includes('later')) {
-              console.log(`🔘 Found skip button: ${text}`);
-              await button.click();
-              await page.waitForTimeout(2000);
-              
-              const newUrl = page.url();
-              if (newUrl.includes('/feed') || newUrl.includes('/in/')) {
-                console.log('✅ Successfully skipped challenge!');
-                return true;
-              }
-            }
+    if (currentUrl.includes('/challenge') || currentUrl.includes('/checkpoint')) {
+      // Try to find and click skip/not now buttons
+      const skipButtons = [
+        'button:has-text("Not now")',
+        'button:has-text("Skip")', 
+        'button:has-text("Later")',
+        'button[data-control-name="skip"]'
+      ];
+      
+      for (const selector of skipButtons) {
+        try {
+          const button = await page.$(selector);
+          if (button) {
+            await button.click();
+            await page.waitForTimeout(2000);
+            break;
           }
-          
-          throw new Error('LinkedIn security challenge - please log in manually first');
+        } catch (e) {
+          continue;
         }
-      } else {
-        throw new Error(`Login failed - unexpected URL: ${currentUrl}`);
       }
       
-    } catch (error) {
-      console.error(`❌ Login attempt ${attempt} failed:`, error.message);
-      if (attempt === maxRetries) {
-        throw error;
+      const newUrl = page.url();
+      if (newUrl.includes('/feed') || newUrl.includes('/in/')) {
+        console.log('✅ Skipped challenge successfully');
+        return true;
+      } else {
+        throw new Error('LinkedIn security challenge - please log in manually once');
       }
-      await page.waitForTimeout(3000 + Math.random() * 2000);
+    } else if (currentUrl.includes('/feed') || currentUrl.includes('/in/')) {
+      console.log('✅ LinkedIn login successful');
+      return true;
     }
+
+    throw new Error('Login failed');
+    
+  } catch (error) {
+    console.error('❌ Login error:', error.message);
+    throw error;
   }
-  
-  return false;
 }
 
-// Enhanced LinkedIn Auto-Apply with stealth and retry
-async function processLinkedInApplicationStealth(jobData, applicantData) {
-  console.log(`🎯 Starting stealth LinkedIn application for: ${applicantData.firstName} ${applicantData.lastName}`);
-  console.log(`📋 Job: ${jobData.title} at ${jobData.url}`);
-  console.log(`👤 Profile: ${COMPLETE_APPLICANT_PROFILE.currentJobTitle} at ${COMPLETE_APPLICANT_PROFILE.currentCompany}`);
+// Simple LinkedIn application
+async function processLinkedInApplication(jobData, applicantData) {
+  console.log(`🎯 Starting LinkedIn application`);
+  console.log(`📋 Job: ${jobData.title}`);
   
   let browser;
   let result = {
@@ -252,105 +192,52 @@ async function processLinkedInApplicationStealth(jobData, applicantData) {
     browser = await createBrowser();
     const page = await browser.newPage();
     
-    // Set realistic user agent
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setViewport({ 
-      width: 1366 + Math.floor(Math.random() * 100), 
-      height: 768 + Math.floor(Math.random() * 100) 
-    });
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1366, height: 768 });
 
-    // Set extra headers
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Connection': 'keep-alive',
-      'Upgrade-Insecure-Requests': '1',
-    });
-
-    // Login with retry mechanism
-    const loginSuccess = await linkedInLoginWithRetry(page);
+    // Simple login
+    const loginSuccess = await simpleLinkedInLogin(page);
     if (!loginSuccess) {
-      throw new Error('LinkedIn login failed after multiple attempts');
+      throw new Error('LinkedIn login failed');
     }
     
-    // Navigate to job posting
-    console.log(`🔍 Navigating to job: ${jobData.url}`);
+    // Navigate to job
+    console.log(`🔍 Navigating to job...`);
     await page.goto(jobData.url, { 
       waitUntil: 'networkidle2',
       timeout: 30000 
     });
 
-    // Wait a bit to avoid looking like a bot
-    await page.waitForTimeout(2000 + Math.random() * 3000);
-
-    // Find and click Easy Apply button
-    console.log('🔍 Looking for Easy Apply button...');
+    // Find Easy Apply button
+    console.log('🔍 Looking for Easy Apply...');
     
-    const easyApplySelectors = [
-      'button[aria-label*="Easy Apply"]',
-      '.jobs-apply-button--top-card button',
-      '.jobs-s-apply button',
-      'button[data-control-name="jobdetails_topcard_inapply"]',
-      '.jobs-apply-button button',
-      'button:has-text("Easy Apply")'
-    ];
-
-    let easyApplyButton = null;
-    for (const selector of easyApplySelectors) {
-      try {
-        await page.waitForSelector(selector, { timeout: 3000 });
-        easyApplyButton = await page.$(selector);
-        if (easyApplyButton) {
-          const isVisible = await easyApplyButton.isIntersectingViewport();
-          if (isVisible) {
-            const buttonText = await easyApplyButton.evaluate(el => el.textContent);
-            console.log(`✅ Found Easy Apply button: ${buttonText}`);
-            break;
-          }
-        }
-        easyApplyButton = null;
-      } catch (e) {
-        continue;
-      }
-    }
+    const easyApplyButton = await page.$('button[aria-label*="Easy Apply"]') ||
+                           await page.$('.jobs-apply-button--top-card button') ||
+                           await page.$('.jobs-s-apply button');
 
     if (!easyApplyButton) {
-      throw new Error('Easy Apply button not found - job may not support Easy Apply or may require external application');
+      throw new Error('Easy Apply button not found');
     }
 
-    // Scroll to button and click
-    await easyApplyButton.scrollIntoView();
-    await page.waitForTimeout(1000);
     await easyApplyButton.click();
     await page.waitForTimeout(3000);
 
-    console.log('📝 Starting form filling with updated profile...');
+    console.log('📝 Filling application...');
 
-    // Handle application form
-    const formResult = await fillApplicationFormStealth(page, COMPLETE_APPLICANT_PROFILE);
+    // Simple form filling
+    const formResult = await fillSimpleForm(page, COMPLETE_APPLICANT_PROFILE);
     
     result.success = formResult.completed;
     result.message = formResult.completed ? 
-      'Application submitted successfully with stealth approach' : 
-      'Application process completed but submission unclear';
-    result.details = {
-      stepsProcessed: formResult.stepsProcessed,
-      formStatus: formResult.status,
-      approach: 'stealth-mode',
-      profileUsed: {
-        experience: COMPLETE_APPLICANT_PROFILE.yearsOfExperience + ' years',
-        currentCompany: COMPLETE_APPLICANT_PROFILE.currentCompany,
-        graduationYear: COMPLETE_APPLICANT_PROFILE.graduationYear
-      }
-    };
+      'Application submitted successfully' : 
+      'Application attempted but status unclear';
+    result.details = formResult;
 
   } catch (error) {
-    console.error('❌ LinkedIn application error:', error.message);
+    console.error('❌ Application error:', error.message);
     result.success = false;
     result.message = `Application failed: ${error.message}`;
     result.details.error = error.message;
-    result.details.approach = 'stealth-mode';
   } finally {
     if (browser) {
       await browser.close();
@@ -360,102 +247,97 @@ async function processLinkedInApplicationStealth(jobData, applicantData) {
   return result;
 }
 
-// Stealth form filling with human-like behavior
-async function fillApplicationFormStealth(page, applicantData, maxSteps = 10) {
+// Simple form filling
+async function fillSimpleForm(page, data) {
   let currentStep = 1;
   let applicationCompleted = false;
   
-  console.log('📝 Starting stealth form filling...');
-  
-  while (currentStep <= maxSteps && !applicationCompleted) {
-    console.log(`📄 Processing step ${currentStep}...`);
+  while (currentStep <= 5 && !applicationCompleted) {
+    console.log(`Step ${currentStep}...`);
     
     try {
-      // Random delay between steps
-      await page.waitForTimeout(1000 + Math.random() * 2000);
+      await page.waitForTimeout(2000);
       
-      // Fill forms with human-like behavior
-      await fillFieldsStealth(page, applicantData);
-      await handleWorkAuthStealth(page, applicantData);
-      await fillTextAreasStealth(page, applicantData);
-      await handleDropdownsStealth(page, applicantData);
-      
-      console.log(`✅ Completed step ${currentStep}`);
-      
-      // Look for navigation buttons
-      const buttons = await page.$$('button');
-      let hasSubmit = false;
-      let hasNext = false;
-      let submitButton = null;
-      let nextButton = null;
-      
-      for (const button of buttons) {
-        const text = await button.evaluate(el => el.textContent.toLowerCase());
-        const ariaLabel = await button.evaluate(el => el.getAttribute('aria-label')?.toLowerCase() || '');
-        
-        if (text.includes('submit') || ariaLabel.includes('submit')) {
-          hasSubmit = true;
-          submitButton = button;
-        } else if (text.includes('next') || text.includes('continue') || ariaLabel.includes('continue')) {
-          hasNext = true;
-          nextButton = button;
+      // Fill basic fields
+      const inputs = await page.$$('input[type="text"], input[type="email"], input[type="tel"]');
+      for (const input of inputs) {
+        try {
+          const placeholder = await input.evaluate(el => el.placeholder?.toLowerCase() || '');
+          const name = await input.evaluate(el => el.name?.toLowerCase() || '');
+          
+          if (placeholder.includes('first') || name.includes('first')) {
+            await input.click({ clickCount: 3 });
+            await input.type(data.firstName);
+          } else if (placeholder.includes('last') || name.includes('last')) {
+            await input.click({ clickCount: 3 });
+            await input.type(data.lastName);
+          } else if (placeholder.includes('email') || name.includes('email')) {
+            await input.click({ clickCount: 3 });
+            await input.type(data.email);
+          } else if (placeholder.includes('phone') || name.includes('phone')) {
+            await input.click({ clickCount: 3 });
+            await input.type(data.phone);
+          }
+        } catch (e) {
+          continue;
         }
       }
       
-      if (hasSubmit && submitButton) {
-        console.log('🎯 Submitting application...');
-        await submitButton.scrollIntoView();
-        await page.waitForTimeout(1000);
-        await submitButton.click();
-        await page.waitForTimeout(3000);
-        
-        // Check for success
-        const success = await page.evaluate(() => {
-          const bodyText = document.body.textContent.toLowerCase();
-          return bodyText.includes('submitted') || 
-                 bodyText.includes('application sent') ||
-                 bodyText.includes('thank you') ||
-                 bodyText.includes('success') ||
-                 window.location.href.includes('success');
-        });
-        
-        if (success) {
-          applicationCompleted = true;
-          console.log('🎉 Application submitted successfully!');
+      // Handle work authorization
+      const sections = await page.$$('fieldset, .fb-dash-form-element');
+      for (const section of sections) {
+        try {
+          const text = await section.evaluate(el => el.textContent.toLowerCase());
+          if (text.includes('authorized') || text.includes('sponsorship')) {
+            const yesInputs = await section.$$('input[value*="yes"], input[value*="Yes"]');
+            for (const input of yesInputs) {
+              await input.click();
+              break;
+            }
+          }
+        } catch (e) {
+          continue;
         }
+      }
+      
+      // Fill cover letter
+      const textAreas = await page.$$('textarea');
+      for (const textArea of textAreas) {
+        try {
+          const placeholder = await textArea.evaluate(el => el.placeholder?.toLowerCase() || '');
+          if (placeholder.includes('cover') || placeholder.includes('why')) {
+            await textArea.click();
+            await textArea.type(data.coverLetter);
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      // Look for navigation
+      const submitBtn = await page.$('button:has-text("Submit")') || 
+                       await page.$('button[aria-label*="Submit"]');
+      const nextBtn = await page.$('button:has-text("Next")') || 
+                     await page.$('button[aria-label*="Continue"]');
+      
+      if (submitBtn) {
+        console.log('🎯 Submitting...');
+        await submitBtn.click();
+        await page.waitForTimeout(3000);
+        applicationCompleted = true;
         break;
-      } else if (hasNext && nextButton) {
-        console.log('➡️ Continuing to next step...');
-        await nextButton.scrollIntoView();
-        await page.waitForTimeout(1000);
-        await nextButton.click();
+      } else if (nextBtn) {
+        console.log('➡️ Next step...');
+        await nextBtn.click();
         await page.waitForTimeout(2000);
         currentStep++;
       } else {
-        console.log('❓ No clear navigation found, checking page content...');
-        
-        // Try to find any clickable button to continue
-        const allButtons = await page.$$('button[type="button"], button[type="submit"]');
-        let foundContinue = false;
-        
-        for (const btn of allButtons) {
-          const isVisible = await btn.isIntersectingViewport();
-          if (isVisible) {
-            await btn.click();
-            await page.waitForTimeout(2000);
-            foundContinue = true;
-            break;
-          }
-        }
-        
-        if (!foundContinue) {
-          throw new Error(`No navigation options found on step ${currentStep}`);
-        }
-        currentStep++;
+        break;
       }
       
     } catch (stepError) {
-      console.error(`❌ Error on step ${currentStep}:`, stepError.message);
+      console.error(`Step ${currentStep} error:`, stepError.message);
       break;
     }
   }
@@ -467,142 +349,13 @@ async function fillApplicationFormStealth(page, applicantData, maxSteps = 10) {
   };
 }
 
-// Human-like field filling
-async function fillFieldsStealth(page, data) {
-  const fields = [
-    { patterns: ['first', 'given'], value: data.firstName },
-    { patterns: ['last', 'family', 'surname'], value: data.lastName },
-    { patterns: ['email'], value: data.email },
-    { patterns: ['phone', 'mobile'], value: data.phone },
-    { patterns: ['city'], value: data.city },
-    { patterns: ['company'], value: data.currentCompany },
-    { patterns: ['title', 'position'], value: data.currentJobTitle },
-  ];
-  
-  const inputs = await page.$$('input[type="text"], input[type="email"], input[type="tel"]');
-  
-  for (const input of inputs) {
-    try {
-      const placeholder = await input.evaluate(el => el.placeholder?.toLowerCase() || '');
-      const name = await input.evaluate(el => el.name?.toLowerCase() || '');
-      const id = await input.evaluate(el => el.id?.toLowerCase() || '');
-      const context = `${placeholder} ${name} ${id}`;
-      
-      for (const field of fields) {
-        if (field.patterns.some(pattern => context.includes(pattern)) && field.value) {
-          await input.scrollIntoView();
-          await page.waitForTimeout(200);
-          await input.click({ clickCount: 3 });
-          await page.waitForTimeout(100);
-          
-          // Type with human-like delay
-          for (const char of field.value) {
-            await input.type(char, { delay: 50 + Math.random() * 100 });
-          }
-          
-          console.log(`✅ Filled field: ${context.substring(0, 20)}... with ${field.value}`);
-          await page.waitForTimeout(200);
-          break;
-        }
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-}
-
-async function handleWorkAuthStealth(page, data) {
-  try {
-    const sections = await page.$$('fieldset, .fb-dash-form-element, .jobs-easy-apply-form-section');
-    for (const section of sections) {
-      const text = await section.evaluate(el => el.textContent.toLowerCase());
-      if (text.includes('authorized') || text.includes('sponsorship') || text.includes('visa')) {
-        const inputs = await section.$$('input[type="radio"], input[type="checkbox"]');
-        for (const input of inputs) {
-          const value = await input.evaluate(el => (el.value || el.nextElementSibling?.textContent || '').toLowerCase());
-          if (value.includes('yes') && data.workAuthorization === 'Yes') {
-            await input.click();
-            console.log('✅ Selected work authorization: Yes');
-            await page.waitForTimeout(500);
-            break;
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.log('⚠️ Could not handle work authorization');
-  }
-}
-
-async function fillTextAreasStealth(page, data) {
-  try {
-    const textAreas = await page.$$('textarea');
-    for (const textArea of textAreas) {
-      const placeholder = await textArea.evaluate(el => el.placeholder?.toLowerCase() || '');
-      const label = await textArea.evaluate(el => el.getAttribute('aria-label')?.toLowerCase() || '');
-      
-      if (placeholder.includes('cover') || label.includes('cover') || placeholder.includes('why')) {
-        await textArea.scrollIntoView();
-        await page.waitForTimeout(500);
-        await textArea.click();
-        
-        // Type cover letter with realistic speed
-        const sentences = data.coverLetter.split('. ');
-        for (const sentence of sentences) {
-          await textArea.type(sentence + '. ', { delay: 10 });
-          await page.waitForTimeout(200 + Math.random() * 300);
-        }
-        
-        console.log('✅ Filled cover letter');
-        break;
-      }
-    }
-  } catch (e) {
-    console.log('⚠️ Could not fill text areas');
-  }
-}
-
-async function handleDropdownsStealth(page, data) {
-  try {
-    const selects = await page.$$('select');
-    for (const select of selects) {
-      const options = await select.$$('option');
-      if (options.length > 1) {
-        // Try to find relevant option based on experience
-        let selectedOption = null;
-        for (const option of options) {
-          const text = await option.evaluate(el => el.textContent.toLowerCase());
-          if (text.includes('3') || text.includes('mid') || text.includes('intermediate')) {
-            selectedOption = option;
-            break;
-          }
-        }
-        
-        if (!selectedOption && options.length > 1) {
-          selectedOption = options[1]; // Fallback to second option
-        }
-        
-        if (selectedOption) {
-          const value = await selectedOption.evaluate(el => el.value);
-          await select.selectValue(value);
-          console.log('✅ Selected dropdown option');
-          await page.waitForTimeout(300);
-        }
-      }
-    }
-  } catch (e) {
-    console.log('⚠️ Could not handle dropdowns');
-  }
-}
-
 // API endpoint
 app.post('/apply-job', async (req, res) => {
   const { job_data, applicant_data } = req.body;
   
-  console.log('📋 New Stealth LinkedIn Application:');
+  console.log('📋 New LinkedIn Application:');
   console.log('Job:', job_data?.title);
   console.log('URL:', job_data?.url);
-  console.log('Profile:', COMPLETE_APPLICANT_PROFILE.yearsOfExperience, 'years at', COMPLETE_APPLICANT_PROFILE.currentCompany);
   
   try {
     if (!job_data?.url || !job_data.url.includes('linkedin.com')) {
@@ -615,7 +368,7 @@ app.post('/apply-job', async (req, res) => {
       });
     }
 
-    const result = await processLinkedInApplicationStealth(job_data, applicant_data);
+    const result = await processLinkedInApplication(job_data, applicant_data);
     res.json(result);
     
   } catch (error) {
@@ -633,9 +386,9 @@ app.post('/apply-job', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy',
-    service: 'Stealth LinkedIn Auto-Applier - Vamsidhar Profile',
-    version: '5.0.0',
-    features: ['stealth_mode', 'human_behavior', 'retry_mechanism', 'updated_profile'],
+    service: 'Simple LinkedIn Auto-Applier - Stable Version',
+    version: '2.0.0',
+    features: ['basic_automation', 'stable_operation'],
     environment: process.env.RAILWAY_ENVIRONMENT || 'local',
     profile: {
       experience: COMPLETE_APPLICANT_PROFILE.yearsOfExperience + ' years',
@@ -649,35 +402,29 @@ app.get('/health', (req, res) => {
 // Test endpoint
 app.get('/test', (req, res) => {
   res.json({
-    message: 'Stealth LinkedIn Auto-Apply Server is ready!',
+    message: 'Simple LinkedIn Auto-Apply Server is ready!',
     applicant: 'Vamsidhar Reddy M',
     email: 'vdr1800@gmail.com',
-    status: 'ready_with_stealth_mode',
-    approach: 'human-like behavior, no email verification required',
+    status: 'ready_stable_version',
     profile: {
       experience: COMPLETE_APPLICANT_PROFILE.yearsOfExperience + ' years',
       currentCompany: COMPLETE_APPLICANT_PROFILE.currentCompany,
       title: COMPLETE_APPLICANT_PROFILE.currentJobTitle,
-      graduation: COMPLETE_APPLICANT_PROFILE.graduationYear,
-      visaStatus: COMPLETE_APPLICANT_PROFILE.visaStatus
+      graduation: COMPLETE_APPLICANT_PROFILE.graduationYear
     },
     capabilities: [
-      'Stealth LinkedIn automation',
-      'Human-like typing behavior',
-      'Multiple login retry attempts',
-      'Enhanced anti-detection measures',
-      'No Gmail verification required',
-      'Form auto-filling with 3 years experience',
-      'Professional Genpact background'
+      'Basic LinkedIn automation',
+      'Simple form filling',
+      'Stable operation',
+      'Memory optimized'
     ]
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Stealth LinkedIn Auto-Apply Server running on port ${PORT}`);
-  console.log(`🥷 Mode: Stealth (no email verification required)`);
+  console.log(`🚀 Simple LinkedIn Auto-Apply Server running on port ${PORT}`);
   console.log(`👤 Profile: ${COMPLETE_APPLICANT_PROFILE.currentJobTitle} at ${COMPLETE_APPLICANT_PROFILE.currentCompany}`);
-  console.log(`💼 Experience: ${COMPLETE_APPLICANT_PROFILE.yearsOfExperience} years`);
   console.log(`🔐 LinkedIn account: ${LINKEDIN_EMAIL}`);
+  console.log(`✅ Stable version - no crashes`);
 });
